@@ -1,10 +1,7 @@
 import os
-import boto3
 from flask import Blueprint, request, flash, redirect, url_for, render_template, session, jsonify
 from src.backend.utils.utils import folders
-from src.backend.scripts.main_rag_amparo import rag
 from dotenv import load_dotenv
-from botocore.exceptions import ClientError
 import datetime
 from src.backend.utils.logger_config import logger
 
@@ -23,37 +20,37 @@ def upload_to_s3():
         return redirect(url_for("auth.logout"))
     
     if request.method == 'POST':
-        if 'file' not in request.files:
-            flash('No file part')
-            return redirect(request.url)
+        # if 'file' not in request.files:
+        #     flash('No file part')
+        #     return redirect(request.url)
         
-        file = request.files['file']
+        # file = request.files['file']
         
-        if file.filename == '':
-            flash('No selected file')
-            return redirect(request.url)
+        # if file.filename == '':
+        #     flash('No selected file')
+        #     return redirect(request.url)
         
-        if file:
-            data = datetime.datetime.now().strftime("%Y_%m_%d")
-            nome_base, extensao = os.path.splitext(file.filename)
-            # Definir o nome do bucket S3 e objeto no S3
-            bucket_name = os.getenv('AWS_S3_BUCKET_NAME')
-            object_name = f'Amparo/{nome_base}_{data}{extensao}'
+        # if file:
+        #     data = datetime.datetime.now().strftime("%Y_%m_%d")
+        #     nome_base, extensao = os.path.splitext(file.filename)
+        #     # Definir o nome do bucket S3 e objeto no S3
+        #     bucket_name = os.getenv('AWS_S3_BUCKET_NAME')
+        #     object_name = f'Amparo/{nome_base}_{data}{extensao}'
 
-            # Fazer upload do arquivo para o S3 diretamente da memória
-            try:
-                s3_client = boto3.client('s3')
-                s3_client.upload_fileobj(file, bucket_name, object_name)
+        #     # Fazer upload do arquivo para o S3 diretamente da memória
+        #     try:
+        #         s3_client = boto3.client('s3')
+        #         s3_client.upload_fileobj(file, bucket_name, object_name)
 
-                flash(f'Upload do {file.filename} feito com sucesso.', 'success')
-                logger.info('File successfully uploaded to S3')
-            except ClientError as e:
-                logger.error(e)
-                flash(f'Falha ao fazer upload do {file.filename}.', 'error')
+        #         flash(f'Upload do {file.filename} feito com sucesso.', 'success')
+        #         logger.info('File successfully uploaded to S3')
+        #     except ClientError as e:
+        #         logger.error(e)
+        #         flash(f'Falha ao fazer upload do {file.filename}.', 'error')
 
-            except Exception as e:
-                logger.error(f"Unexpected error: {e}")
-                flash('Ocorreu um erro inesperado ao tentar fazer o upload. Tente novamente.', 'error')
+        #     except Exception as e:
+        #         logger.error(f"Unexpected error: {e}")
+        #         flash('Ocorreu um erro inesperado ao tentar fazer o upload. Tente novamente.', 'error')
             
             return redirect(url_for('upload_s3.upload_to_s3'))
     
