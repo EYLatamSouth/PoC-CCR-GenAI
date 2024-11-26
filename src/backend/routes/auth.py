@@ -27,13 +27,13 @@ def index():
     user_id = session.get('user_id')
 
     if user_id:
-        return redirect(url_for("auth.show_chat")) 
+        return redirect(url_for("auth.show_upload")) 
     else:
         return redirect(url_for("auth.login"))
 
 @bp.route('/chat', methods=['GET'])
-def show_chat():
-    return render_template('select/index.html')
+def show_upload():
+    return render_template('upload/upload.html')
 
 @bp.route("/login")
 def login():
@@ -66,7 +66,7 @@ def auth_response():
     session['token'] = result.get("sub")  # Usando o "sub" como identificador único do token
     session.permanent = True  # Torna a sessão permanente (expira conforme configurado)
 
-    return redirect(url_for("auth.show_chat"))
+    return redirect(url_for("auth.show_upload"))
 
 
 @bp.route("/logout")
