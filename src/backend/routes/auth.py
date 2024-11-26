@@ -4,6 +4,7 @@ from flask import Blueprint, request, render_template, make_response, redirect, 
 import identity.web
 from dotenv import load_dotenv
 from src.backend.utils.utils import folders
+from src.backend.utils.logger_config import logger
 
 load_dotenv()
 
@@ -23,7 +24,7 @@ auth = identity.web.Auth(
 
 @bp.route("/")
 def index():
-
+    logger.info("CLIENT_ID: ",CLIENT_ID)
     user_id = session.get('user_id')
 
     if user_id:
