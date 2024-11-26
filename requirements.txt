@@ -1,6 +1,15 @@
+azure-core
+azure-identity==1.15.0
 python-dotenv==1.0.1
 openai==1.10.0
 PyPDF2==3.0.1
 langchain==0.1.8
 langchain-openai==0.0.6
 tiktoken==0.5.2
+Flask==2.2.2
+Flask-Session==0.5
+identity==0.5.2
+Werkzeug==2.3.7
+opencensus-ext-azure 
+opencensus-ext-flask
+azure-storage-blob
