@@ -639,7 +639,6 @@ border-radius: 0 0 15px 15px !important;
 }
 
 .bg-login-image {
-    background: url(/static/img/undraw_login.svg);
     background-position: center;
     background-size: 400px 680px;
     background-repeat: no-repeat
@@ -660,8 +659,8 @@ border-radius: 0 0 15px 15px !important;
 }
 
 .img-upload {
-    width: 50%;
-    height: 20%;
+    width: 100pt;
+    height: 75pt;
     max-width: 100%; /* Ajuste conforme necessário */
 }
 
