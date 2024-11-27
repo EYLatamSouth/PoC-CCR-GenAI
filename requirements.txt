@@ -15,3 +15,4 @@ opencensus-ext-flask
 azure-storage-blob
 loguru
 zipfile36
+azure-functions
