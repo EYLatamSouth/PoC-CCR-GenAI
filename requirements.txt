@@ -14,3 +14,4 @@ opencensus-ext-azure
 opencensus-ext-flask
 azure-storage-blob
 loguru
+zipfile36
