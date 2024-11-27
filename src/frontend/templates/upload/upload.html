@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload para S3</title>
+    <title>Resumo PDF</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <!-- Favicon-->
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/EY_COLOR_ICO.ico') }}" />
@@ -17,9 +17,9 @@
                     <div class="col-lg-6">
                         <div class="p-5">
                             <div class="text-center">
-                                <!-- Logo Petrobras -->
+                                <!-- Logo EY -->
                                 <img class="img-upload" src="{{ url_for('static', filename='img/EY_COLOR.png') }}" alt="Logo EY">
-                                <h1 class="h4 text-gray-900 mb-4">Upload de arquivos para S3</h1>
+                                <h1 class="h4 text-gray-900 mb-4">Resumir documentos PDF</h1>
                             </div>
 
                             <!-- Exibir mensagens de flash -->
@@ -37,23 +37,16 @@
                            <div class="card-txt text-center mb-4" style="border: none; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
                                <div class="card-txt-body">
                                    <p class="mb-3" style="font-size: 16px; color: #333;">
-                                       <strong>Os documentos inseridos serão utilizados no agente Amparo.</strong>
-                                       <br>Para garantir o bom funcionamento do agente, é necessário que os arquivos sigam os nomes indicados a seguir:
+                                       <strong>Os documentos inseridos serão resumidos com o uso de IA Generativa.</strong>
+                                       <br>Para garantir o bom funcionamento, é necessário que os arquivos PDF nativos, ou seja, documentos de texto e não imagens transformadas em PDF.
                                    </p>
-                                   <ul class="list-group list-group-flush" style="text-align: left; max-width: 300px; margin: 0 auto; color: #555;">
-                                        <li>guia_de_preenchimento.pdf;</li>
-                                        <li>manual_orientativo.pdf;</li>
-                                        <li>resolucao_credenciamento.pdf;</li>
-                                        <li>resolucao_normas.pdf;</li>
-                                        <li>tipos_projetos.pdf;</li>
-                                        <li>despesas_admitidas.xlsx.</li>
-                                   </ul>
+                                  
                                </div>
                            </div>
 
                        
                             <!-- Formulário de Upload -->
-                            <form id="uploadForm" action="{{ url_for('upload_s3.upload_to_s3') }}" method="post" enctype="multipart/form-data" class="text-center">
+                            <form id="uploadForm" action="{{ url_for('upload.upload') }}" method="post" enctype="multipart/form-data" class="text-center">
                                 <div class="form-group d-flex align-items-center justify-content-center">
                                     <!-- Input de arquivo centralizado -->
                                     <input type="file" name="file" class="form-control-file" id="fileInput" required style="display:none;">
@@ -62,11 +55,16 @@
                                     <!-- Botão de upload -->
                                     <button type="submit" class="btn-file">Upload</button>
                                 </div>
-                            </form>
-                            <!-- Botão para gerar o índice -->
-                            <div class="text-center">
-                                <button id="generateIndexButton" class="btn-index-enabled">Gerar Index</button>
-                            </div>
+
+                                <!-- Botão para gerar o resumo -->
+                                <div class="text-center">
+                                    <button id="generateSummButton" class="btn-index-enabled">Gerar Resumo</button>
+                                </div>
+
+                                <!-- Botão para baixar os resumos -->
+                                <div class="text-center mt-3">
+                                    <button id="downloadSummariesButton" class="btn-download-enabled">Baixar Resumos</button>
+                                </div>
                         </div> 
                     </div> 
                 </div> 
@@ -80,9 +78,14 @@
                                     document.getElementById('fileName').textContent = fileName;
                                 });
 
-                                // Função para enviar requisição AJAX para gerar o índice
-                                document.getElementById('generateIndexButton').addEventListener('click', function() {
-                                    fetch("{{ url_for('upload_s3.generate_index_amparo') }}", {
+                                // Função para enviar requisição AJAX para gerar o resumo
+                                document.getElementById('generateSummButton').addEventListener('click', function() {
+                                    // Mostrar feedback de carregamento
+                                    const button = this;
+                                    button.textContent = 'Gerando Resumo...';
+                                    button.disabled = true;
+
+                                    fetch("{{ url_for('upload.generate_summary') }}", {
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',
@@ -94,10 +97,45 @@
                                         alert(data.message); // Exibe a mensagem de sucesso ou erro
                                     })
                                     .catch(error => {
-                                        alert('Erro ao gerar o índice.');
+                                        alert('Erro ao gerar o resumo.');
+                                        console.error('Erro:', error);
+                                    })
+                                    .finally(() => {
+                                        // Restaurar o botão após a conclusão
+                                        button.textContent = 'Gerar Resumo';
+                                        button.disabled = false;
+                                    });
+                                });
+                                
+                                // Função para fazer download dos resumo
+                                document.getElementById('downloadSummariesButton').addEventListener('click', function() {
+                                    fetch("{{ url_for('upload.download_summaries') }}", {
+                                        method: 'GET',
+                                    })
+                                    .then(response => {
+                                        if (response.ok) {
+                                            return response.blob();
+                                        } else {
+                                            return response.json().then(data => { throw new Error(data.message); });
+                                        }
+                                    })
+                                    .then(blob => {
+                                        // Criar link de download para o arquivo ZIP
+                                        const url = window.URL.createObjectURL(blob);
+                                        const a = document.createElement('a');
+                                        a.style.display = 'none';
+                                        a.href = url;
+                                        a.download = 'summaries.zip';
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        window.URL.revokeObjectURL(url);
+                                    })
+                                    .catch(error => {
+                                        alert('Erro ao baixar os resumos.');
                                         console.error('Erro:', error);
                                     });
                                 });
+
                             </script>
 </body>
 </html>
