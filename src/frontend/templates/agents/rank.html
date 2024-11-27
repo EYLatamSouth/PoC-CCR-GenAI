@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rank PDF</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Favicon-->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/EY_COLOR_ICO.ico') }}" />
+</head>
+<body>
+    <div class="container-uplpad">
+        <div class="row justify-content-center">
+            <div class="card-login o-hidden border-0 shadow-lg my-5">
+                <div class="row">
+                    <div class="col-lg-6 d-none d-lg-block bg-login-image"></div>
+                    <div class="col-lg-6">
+                        <div class="p-5">
+                            <div class="text-center">
+                                <!-- Logo EY -->
+                                <img class="img-upload" src="{{ url_for('static', filename='img/EY_COLOR.png') }}" alt="Logo EY">
+                                <h1 class="h4 text-gray-900 mb-4">Ranquear documentos PDF</h1>
+                            </div>
+
+                            <!-- Exibir mensagens de flash -->
+                            {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                            <div class="flash-messages">
+                                {% for category, message in messages %}
+                                <div class="alert alert-{{ category }}">{{ message }}</div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            {% endwith %}
+                            
+                           <!-- Card de Instrução -->
+                           <div class="card-txt text-center mb-4" style="border: none; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+                               <div class="card-txt-body">
+                                   <p class="mb-3" style="font-size: 16px; color: #333;">
+                                       <strong>Os documentos inseridos serão ranqueados com o uso de IA Generativa.</strong>
+                                       <br>Para garantir o bom funcionamento, é necessário que os arquivos sejam PDF nativos, ou seja, documentos de texto e não imagens transformadas em PDF.
+                                   </p>
+                                  
+                               </div>
+                           </div>
+
+                       
+                            <!-- Formulário de Upload -->
+                            <form id="uploadForm" action="{{ url_for('rank.upload_rank') }}" method="post" enctype="multipart/form-data" class="text-center">
+                                <div class="form-group d-flex align-items-center justify-content-center">
+                                    <!-- Input de arquivo centralizado -->
+                                    <input type="file" name="file" class="form-control-file" id="fileInput" required style="display:none;">
+                                    <label for="fileInput" class="btn-file">Escolher arquivo</label>
+                                    <span id="fileName" class="ml-2" style="color: black;">Nenhum arquivo selecionado</span>
+                                    <!-- Botão de upload -->
+                                    <button type="submit" class="btn-file">Upload</button>
+                                </div>
+
+                                <!-- Botão para gerar o rank -->
+                                <div class="text-center">
+                                    <button id="generateSummButton" class="btn-index-enabled">Gerar Rank</button>
+                                </div>
+
+                                <!-- Botão para baixar os rank -->
+                                <div class="text-center mt-3">
+                                    <button id="downloadRankButton" class="btn-download-enabled">Baixar Rank</button>
+                                </div>
+                        </div> 
+                    </div> 
+                </div> 
+            </div> 
+        </div> 
+    </div> 
+                            <script>
+                                // Script para mostrar o nome do arquivo selecionado
+                                document.getElementById('fileInput').addEventListener('change', function() {
+                                    var fileName = this.files[0] ? this.files[0].name : 'Nenhum arquivo selecionado';
+                                    document.getElementById('fileName').textContent = fileName;
+                                });
+
+                                // Função para enviar requisição AJAX para gerar o rank
+                                document.getElementById('generateSummButton').addEventListener('click', function() {
+                                    // Mostrar feedback de carregamento
+                                    const button = this;
+                                    button.textContent = 'Gerando Rank...';
+                                    button.disabled = true;
+
+                                    fetch("{{ url_for('rank.generate_ranking') }}", {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({}), 
+                                    })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        alert(data.message); // Exibe a mensagem de sucesso ou erro
+                                    })
+                                    .catch(error => {
+                                        alert('Erro ao gerar o rank.');
+                                        console.error('Erro:', error);
+                                    })
+                                    .finally(() => {
+                                        // Restaurar o botão após a conclusão
+                                        button.textContent = 'Gerar Rank';
+                                        button.disabled = false;
+                                    });
+                                });
+                                
+                                // Função para fazer download dos rank
+                                document.getElementById('downloadRankButton').addEventListener('click', function() {
+                                    fetch("{{ url_for('rank.download_rankings') }}", {
+                                        method: 'GET',
+                                    })
+                                    .then(response => {
+                                        if (response.ok) {
+                                            return response.blob();
+                                        } else {
+                                            return response.json().then(data => { throw new Error(data.message); });
+                                        }
+                                    })
+                                    .then(blob => {
+                                        // Criar link de download para o arquivo ZIP
+                                        const url = window.URL.createObjectURL(blob);
+                                        const a = document.createElement('a');
+                                        a.style.display = 'none';
+                                        a.href = url;
+                                        a.download = 'ranks.zip';
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        window.URL.revokeObjectURL(url);
+                                    })
+                                    .catch(error => {
+                                        alert('Erro ao baixar os ranks.');
+                                        console.error('Erro:', error);
+                                    });
+                                });
+
+                            </script>
+</body>
+</html>
