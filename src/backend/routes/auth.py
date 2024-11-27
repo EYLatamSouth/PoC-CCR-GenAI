@@ -32,7 +32,7 @@ def index():
     else:
         return redirect(url_for("auth.login"))
 
-@bp.route('/chat', methods=['GET'])
+@bp.route('/summarization', methods=['GET'])
 def show_upload():
     return render_template('upload/upload.html')
 
