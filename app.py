@@ -4,7 +4,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, session
 from flask_session import Session
 from src.backend.utils.utils import folders
-from src.backend.routes import auth, health, upload
+from src.backend.routes import auth, health, classify_route, rank_route, summary_route, vendorlist_route
 from dotenv import load_dotenv
 from opencensus.ext.azure.trace_exporter import AzureExporter
 from opencensus.ext.flask.flask_middleware import FlaskMiddleware
@@ -44,7 +44,10 @@ def create_app():
     # Registrar blueprints
     app.register_blueprint(auth.bp)
     app.register_blueprint(health.bp)
-    app.register_blueprint(upload.bp)
+    app.register_blueprint(summary_route.bp)
+    app.register_blueprint(classify_route.bp)
+    app.register_blueprint(rank_route.bp)
+    app.register_blueprint(vendorlist_route.bp)
     
     return app
 
