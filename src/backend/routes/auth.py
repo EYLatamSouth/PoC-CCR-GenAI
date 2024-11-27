@@ -24,17 +24,16 @@ auth = identity.web.Auth(
 
 @bp.route("/")
 def index():
-    logger.info("CLIENT_ID: ",CLIENT_ID)
     user_id = session.get('user_id')
 
     if user_id:
-        return redirect(url_for("auth.show_upload")) 
+        return redirect(url_for("auth.show_agents")) 
     else:
         return redirect(url_for("auth.login"))
 
-@bp.route('/summarization', methods=['GET'])
-def show_upload():
-    return render_template('upload/upload.html')
+@bp.route('/index', methods=['GET'])
+def show_agents():
+    return render_template('select/index.html')
 
 @bp.route("/login")
 def login():
@@ -67,7 +66,7 @@ def auth_response():
     session['token'] = result.get("sub")  # Usando o "sub" como identificador único do token
     session.permanent = True  # Torna a sessão permanente (expira conforme configurado)
 
-    return redirect(url_for("auth.show_upload"))
+    return redirect(url_for("auth.show_agents"))
 
 
 @bp.route("/logout")
