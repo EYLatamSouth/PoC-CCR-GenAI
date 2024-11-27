@@ -59,6 +59,16 @@ body,html{
 border-radius: 0 0 15px 15px !important;
 	border-top: 0 !important;
 }
+
+.content-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+}
+
 .container{
 	align-content: center;
 }
@@ -675,18 +685,18 @@ border-radius: 0 0 15px 15px !important;
     color: #7C7C7C;
     text-align: center;
     vertical-align: middle;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
     user-select: none;
     background-color: transparent;
     border: 1px solid transparent;
-    padding: .375rem .75rem;
+    padding: .375rem 1.5rem; /* Aumenta o espaçamento horizontal */
     font-size: 1rem;
     line-height: 1.5;
     border-radius: .35rem;
-    transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out, box-shadow .15s ease-in-out
+    transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+    width: 200px; /* Define uma largura mínima */
+    max-width: 100%; /* Garante responsividade */
 }
+
 
 .btn-secondary {
     color: #fff;
