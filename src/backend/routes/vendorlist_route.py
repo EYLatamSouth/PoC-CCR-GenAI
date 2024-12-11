@@ -83,21 +83,26 @@ def download_vendorlist():
     try:
         datalake = AzureDataLake()
         files = datalake.get_files_names_from_adls()
-        class_files = [f for f in files if f.startswith(folder_name) and f.endswith('.txt')]
+        vendor_files = [f for f in files if f.startswith(folder_name) and f.endswith('vendorlist.xlsx')]
 
-        if not class_files:
+        if not vendor_files:
             logger.info(f"No vendorlist files found in folder '{folder_name}'.")
             return jsonify({'message': 'No vendorlist available for download.'}), 404
 
         zip_stream = BytesIO()
         with ZipFile(zip_stream, 'w') as zip_file:
-            for file_name in class_files:
+            for file_name in vendor_files:
                 file_stream = BytesIO()
                 datalake.download_file(file_name, file_stream)
                 file_stream.seek(0)
                 zip_file.writestr(os.path.basename(file_name), file_stream.read())
 
         zip_stream.seek(0)
+
+        # Excluir arquivos vendorlist enviados após o processamento
+        for xlsx_file_name in vendor_files:
+            datalake.delete_file(xlsx_file_name)
+        logger.info(f"Deleted all summary files in folder '{folder_name}'.")
 
         return send_file(
             zip_stream,
