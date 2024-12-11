@@ -7,6 +7,7 @@ from src.backend.utils.maps import extract_information_from_page, update_all_pag
 from src.backend.llm.azure_open_ai import create_azure_chat_llm
 from src.backend.storage.storage import AzureDataLake
 from src.backend.utils.logger_config import logger
+import json
 
 def summarization(folder_name):
     # Inicializar Azure Data Lake
@@ -20,7 +21,7 @@ def summarization(folder_name):
         raise FileNotFoundError("No PDF files found in the specified folder.")
 
     # Configurar o modelo de LLM
-    llm = create_azure_chat_llm()
+    llm = create_azure_chat_llm(temperature=0)
     conversation = ConversationChain(llm=llm, verbose=True)
 
     for file_name in user_files:
@@ -34,12 +35,13 @@ def summarization(folder_name):
 
         # Dicionário para armazenar informações do arquivo atual
         all_pages_data = {
-            "Processo": "Não identificado",
-            "Autor": "Não identificado",
-            "Réu": "Não identificado",
-            "Resumo": [],
-            "Pedidos": [],
-            "Decisões": [],
+            "Processo": set(),
+            "Autor": set(),
+            "Salário": set(),
+            "Tempo": set(),
+            "Valor": set(),
+            "Objetos": set(),
+            "Resumo": []
         }
 
         for page_num in range(len(pdf_reader.pages)):
@@ -48,36 +50,49 @@ def summarization(folder_name):
             update_all_pages_data(all_pages_data, extracted_data)
             conversation.memory.clear()
 
-        # Consolidar o resumo final
         final_prompt = (
             f"""
-            Você é um agente de inteligência artificial e capacitado para atuar no setor jurídico. 
-            Você recebeu uma string com os resumos de cada página de um arquivo PDF, a string está abaixo entre ***.
-            Nessa string tem os resumos de todas as páginas do documento PDF.
-            Seu objetivo é ler essa string de resumos e consolidá-los em um único texto coeso e direto.
-            Esse texto consolidado tem que ser o resumo do PDF inteiro.
-            Você tem todas as informações necessárias para executar essa tarefa de forma precisa. 
-            A sua resposta precisa ter sempre a seção RESPOSTA, e deve ser sempre apresentada exclusivamente no seguinte formato:
+            Você é um agente de inteligência artificial especializado em redigir resumos jurídicos de maneira precisa e objetiva. 
+            Você recebeu uma string contendo os resumos de cada página de uma reclamação trabalhista. 
+            Sua tarefa é consolidar essas informações em um único texto coeso, claro e direto, representando o resumo da reclamação trabalhista como um todo.
+            O texto final deve refletir o conteúdo integral da reclamação, sem conter termos como "a página diz/trata/menciona" ou indicar que as informações vêm de páginas específicas.
 
-            "
-            ###RESPOSTA###
-
-            <Resumo do PDF>
-
-            "
-
-            Traga as respostas sempre no formato demonstrado acima, com RESPOSTA sinalizado por ###.        
-
+            ### Formato da Resposta ###
+            Retorne exclusivamente uma resposta em JSON no seguinte formato:
+            {{
+            "resumo": "A reclamação trabalhista diz..."
+            }}
+            
+            ### Regras Adicionais ###
+            - Não inclua frases desnecessárias que indiquem a origem das informações.
+            - Construa o texto de forma fluida, combinando os resumos em um único parágrafo que capture a essência da reclamação trabalhista.
+            - Seja objetivo e mantenha um tom formal e técnico.
+            
             ***STRING: {' '.join(all_pages_data["Resumo"])}***
+
+            Resposta em JSON:
             """
         )
+
         final_prompt_limited = limitar_tokens(final_prompt)
         final_summary = conversation.run(final_prompt_limited)
-
-        match = re.search(r'###RESPOSTA###(.*)', final_summary, re.DOTALL)
+        print("final_summary: ", final_summary)
+        try:
+            # Limpar espaços e quebras de linha
+            final_summary_cleaned = final_summary.strip()
+            print("final_summary_cleaned: ", final_summary_cleaned)
+            # Verificar se é JSON válido
+            if final_summary_cleaned.startswith('{') and final_summary_cleaned.endswith('}'):
+                final_summary_json = json.loads(final_summary_cleaned)
+                print("final_summary_json: ", final_summary_json)
+            else:
+                logger.error("Formato inválido, o texto não é JSON.")
+                return {"resumo": "Erro ao resumir: formato inválido"}
+        except json.JSONDecodeError as e:
+            logger.error(f"Erro ao decodificar JSON: {e}")
+            return {"resumo": "Erro ao resumir: falha ao decodificar JSON"}
         
-        resumo = match.group(1).strip() if match else "Erro: A resposta não contém os delimitadores esperados."
-
+        resumo = final_summary_json['resumo']
         # Criar o nome do arquivo de resumo
         base_name = os.path.splitext(os.path.basename(file_name))[0]
         summary_file_name = f"{folder_name}/{base_name}_summary.txt"
@@ -87,9 +102,10 @@ def summarization(folder_name):
             f"Informações extraídas:\n"
             f"Processo: {all_pages_data['Processo']}\n"
             f"Autor: {all_pages_data['Autor']}\n"
-            f"Réu: {all_pages_data['Réu']}\n"
-            f"Pedidos: {'; '.join(all_pages_data['Pedidos'])}\n"
-            f"Decisões: {'; '.join(all_pages_data['Decisões'])}\n\n"
+            f"Salário: {all_pages_data['Salário']}\n"
+            f"Tempo: {all_pages_data['Tempo']}\n"
+            f"Valor: {all_pages_data['Valor']}\n"
+            f"Objetos: {all_pages_data['Objetos']}\n\n"
             f"Resumo consolidado:\n"
             f"{resumo}"
         )
