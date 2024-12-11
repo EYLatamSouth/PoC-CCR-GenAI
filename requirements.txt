@@ -16,3 +16,8 @@ azure-storage-blob
 loguru
 zipfile36
 azure-functions
+pandas
+openpyxl
+unidecode
+azure-ai-textanalytics==5.3.0
+azure-ai-formrecognizer
