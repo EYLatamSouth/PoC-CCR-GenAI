@@ -85,6 +85,7 @@ def download_classifications():
         datalake = AzureDataLake()
         files = datalake.get_files_names_from_adls()
         class_files = [f for f in files if f.startswith(folder_name) and f.endswith('.txt')]
+        pdf_files = [f for f in files if f.startswith(folder_name) and f.endswith(".pdf")]
 
         if not class_files:
             logger.info(f"No classification files found in folder '{folder_name}'.")
@@ -99,6 +100,16 @@ def download_classifications():
                 zip_file.writestr(os.path.basename(file_name), file_stream.read())
 
         zip_stream.seek(0)
+
+        # Excluir arquivos TXT enviados após o processamento
+        for txt_file_name in class_files:
+            datalake.delete_file(txt_file_name)
+        logger.info(f"Deleted all summary files in folder '{folder_name}'.")
+
+        # Excluir arquivos PDF enviados após o processamento
+        for pdf_file_name in pdf_files:
+            datalake.delete_file(pdf_file_name)
+        logger.info(f"Deleted all processed PDF files in folder '{folder_name}'.")
 
         return send_file(
             zip_stream,
