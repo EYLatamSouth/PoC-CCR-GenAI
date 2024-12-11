@@ -3,6 +3,8 @@ from datetime import datetime
 from dotenv import load_dotenv
 from src.backend.utils.logger_config import logger
 from azure.storage.blob import BlobServiceClient
+import pandas as pd
+from io import BytesIO
 
 load_dotenv()
 
@@ -98,6 +100,26 @@ class AzureDataLake:
             logger.info(f"File {object_name} successfully deleted from Azure Data Lake.")
         except Exception as e:
             logger.error(f"Error deleting file {object_name}: {e}")
+
+    def read_excel(self, object_name, sheet_name=None):
+        """
+        Lê um arquivo Excel diretamente do Azure Data Lake.
+
+        Args:
+            object_name (str): Nome do arquivo no armazenamento.
+            sheet_name (str): Nome da planilha no arquivo Excel (opcional).
+
+        Returns:
+            pd.DataFrame: DataFrame com os dados do arquivo Excel.
+        """
+        try:
+            file_stream = BytesIO()
+            self.download_file(object_name, file_stream)
+            logger.info(f"Reading Excel file: {object_name}")
+            return pd.read_excel(file_stream, sheet_name=sheet_name, engine='openpyxl')
+        except Exception as e:
+            logger.error(f"Error reading Excel file {object_name}: {e}")
+            return pd.DataFrame()
 
     def extract_date_from_file_name(self, file_name):
         """
