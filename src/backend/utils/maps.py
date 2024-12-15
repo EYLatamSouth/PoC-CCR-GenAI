@@ -23,16 +23,111 @@ def limitar_tokens(prompt: str, max_tokens=8000, modelo="cl100k_base"):
         return truncated_prompt
     return prompt
 
+
+
+# Função para remover as strings com base nos padrões
+def remove_patterns_from_sentences(sentences):
+    cleaned_sentences = []
+
+    patterns = [
+    r"fls .: \d{1,3}",  
+    r"okuyama & alves advogados",  
+    r"\(19\) 99416-2590",  
+    r"\(11\) 94390-6888",  
+    r"\(11\) 99160-5858",  
+    r"www.okuyamaealvesadvogados.com.br",  
+    r"okuyamaealvesadvogados@aasp.org.br", 
+    r"pje assinado eletronicamente por:",  
+    r"erick keiti okuyama",
+    r"juntado em: 05/06/2024 14:38:38",
+    r"4d07594",
+    r"ab61ae7",
+    r"av. narciso yague guimaraes",
+    r"no 1145, " ,
+    r"sala 501, ",
+    r"5a andar, " ,
+    r"jardim armenia, ",
+    r"mogi das cruzes, ",
+    r"cep: 08780-500"
+    ]   
+
+    for sentence in sentences:
+        for pattern in patterns:
+            sentence = re.sub(pattern, "", sentence)
+        cleaned_sentences.append(sentence.replace('. r$',' r$').strip())
+    return cleaned_sentences
+
 # Função principal para extrair informações
-def extract_information_from_page(conversation, page_text):
+
+def extract_valor_causa(sentences):
+    pattern = r"valor da causa:\s*r\$\s?\d{1,3}(?:\.\d{3})*(?:,\s?\d{2})?"
+    matches = [re.search(r"r\$\s?\d{1,3}(?:\.\d{3})*(?:,\s?\d{2})", m, re.IGNORECASE).group().upper() for m in sentences if re.search(pattern, m, re.IGNORECASE)]
+    return matches
+
+def extract_reclamante(sentences):
+    pattern = r"reclamante:\s*([\w\s]+?)\s*advogado:"
+    matches = [m.title() for s in sentences for m in re.findall(pattern, s, re.IGNORECASE)]
+    return matches
+
+def extract_aviso_previo(sentences):
+    pattern = r"[a-z]\) aviso previo.*?r\$\s?\d{1,3}(?:\.\d{3})*(?:,\s?\d{2});"
+    matches = [re.search(r"r\$\s?\d{1,3}(?:\.\d{3})*(?:,\s?\d{2})", m, re.IGNORECASE).group().upper() for m in sentences if re.search(pattern, m, re.IGNORECASE)]
+    return matches
+
+def extract_danos_morais(sentences):
+    pattern = r"danos.*?r\$\s?\d{1,3}(?:\.\d{3})*(?:,\s?\d{2})"
+    matches = [re.search(r"r\$\s?\d{1,3}(?:\.\d{3})*(?:,\s?\d{2})", m, re.IGNORECASE).group().upper() for m in sentences if re.search(pattern, m, re.IGNORECASE)]
+    return matches
+
+def extract_insalubridade(sentences):
+    pattern = r"[a-z]\)\s.*?reclamante no pagamento do adicional de insalubridade.*?r\$\s?\d{1,3}(?:\.\d{3})*(?:,\s?\d{2})"
+    matches = [re.search(r"r\$\s?\d{1,3}(?:\.\d{3})*(?:,\s?\d{2})", m, re.IGNORECASE).group().upper() for m in sentences if re.search(pattern, m, re.IGNORECASE)]
+    return matches
+
+def extract_honorarios(sentences):
+    pattern = r"honorarios.*?\b(\d{1,3}%)"
+    matches = [m.upper() for s in sentences for m in re.findall(pattern, s, re.IGNORECASE)]
+    return matches
+
+def extract_salario(sentences):
+    pattern = r"percebendo como salario a quantia de r\$\s?\d{1,3}(?:\.\d{3})*(?:,\s?\d{2})\s*\("
+    matches = [re.search(r"r\$\s?\d{1,3}(?:\.\d{3})*(?:,\s?\d{2})", m, re.IGNORECASE).group().upper() for m in sentences if re.search(pattern, m, re.IGNORECASE)]
+    return matches
+
+def extract_data_inicio(sentences):
+    pattern = r"admitida.*?(\d{2}/\d{2}/\d{4})"
+    matches = [m for s in sentences for m in re.findall(pattern, s, re.IGNORECASE)]
+    return matches
+
+def extract_data_fim(sentences):
+    pattern = r"encerrar.*?(\d{2}/\d{2}/\d{4})|pedido de demissao.*?(\d{2}/\d{2}/\d{4})"
+    matches = [m for s in sentences for m in re.findall(pattern, s, re.IGNORECASE) if m]
+    matches = [m[0] if m[0] else m[1] for m in matches]  # Handle multiple groups
+    return matches
+
+def process_sentences(sentences):
+    dict_extract = {
+        "ValorCausa": ", ".join(extract_valor_causa(sentences)).upper(),
+        "Reclamante": ", ".join(extract_reclamante(sentences)).title(),
+        "AvisoPrevio": ", ".join(extract_aviso_previo(sentences)).upper(),
+        "DanosMorais": ", ".join(extract_danos_morais(sentences)).upper(),
+        "Insalubridade": ", ".join(extract_insalubridade(sentences)).upper(),
+        "Honorarios": ", ".join(extract_honorarios(sentences)).upper(),
+        "Salario": ", ".join(extract_salario(sentences)).upper(),
+        "DataInicio": ", ".join(extract_data_inicio(sentences)),
+        "DataFim": ", ".join(extract_data_fim(sentences))
+    }
+    return dict_extract
+
+def summary_page(conversation, page_text):
     # Criação do prompt
 
     prompt_string = (
     f"""
-    Você é um agente de inteligência artificial especializado em extrair informaçÕes e redigir resumos jurídicos de maneira precisa e objetiva.  
-    Você recebeu um texto referente à uma página de uma reclamação trabalhista.
+    Você é um agente de inteligência artificial especializado em redigir resumos jurídicos de maneira precisa, objetiva e técnica.  
+    Você recebeu um texto referente à uma página de um processo trabalhista.
     O texto da página está abaixo entre ***.
-    Extraia as informações abaixo do texto fornecido.
+    Se atente bem ao texto e traga o resumo com as informações mais relevantes.
     Seja direto, objetivo e responda apenas com os dados solicitados e no formato especificado. 
     Se alguma informação não for encontrada, responda "Não identificado".
 
@@ -40,13 +135,7 @@ def extract_information_from_page(conversation, page_text):
     Retorne exclusivamente uma resposta em JSON no seguinte formato:
 
     {{
-    "Processo" :  "<Número da reclamação trabalhista (ex.: "0010005-64.2021.5.03.0187")>",
-    "Autor" : "<Nome do autor do processo (também chamado de adverso, reclamante ou ex-empregado)>",
-    "Salário" : "<Valor do salário ou remuneração do autor (ex.: "R$ 2.500,00")>",
-    "Tempo" : "<Tempo de serviço do autor na empresa (ex.: "5 anos e 3 meses")>",
-    "Resumo" : "<Resumo objetivo do conteúdo da página. Comece sempre com "O documento diz...">",
-    "Valor" : "<Valor da causa informado no processo, costuma ser o maior valor escrito no documento (ex.: "R$ 500.000,00")>",
-    "Objetos" : "<Objetos da reclamação e seus valores, no formato "<Objeto>" - "<Valor>" (ex.: "Hora extra" - "R$ 2.000,00", "Férias" - "R$ 3.500,00", "FGTS" - "Não identificado")>"
+    "Resumo" : "<Resumo objetivo do conteúdo da página. Comece sempre com "O documento diz...">"
     }}
 
     ### Regras Adicionais ###
@@ -64,7 +153,6 @@ def extract_information_from_page(conversation, page_text):
 
     # Chamada para o modelo de conversa
     response = conversation.run(prompt_string_limited)  # Use .run() para strings diretas
-    print("response: ",response)
     try:
         # Limpar espaços e quebras de linha
         response_cleaned = response.strip()
@@ -76,21 +164,16 @@ def extract_information_from_page(conversation, page_text):
             response_json = json.loads(response_cleaned)
         else:
             logger.error("Formato inválido, o texto não é JSON.")
+            
 
             response_json =  {
-                "Processo" : "Não identificado",
-                "Autor" : "Não identificado",
-                "Salário" : "Não identificado",
-                "Tempo" : "Não identificado",
-                "Resumo" : "",
-                "Valor" : "Não identificado",
-                "Objetos" : "Não identificado"
+                "Resumo" : ""
             }
             return response_json
         
     except json.JSONDecodeError as e:
         logger.error(f"Erro ao decodificar JSON: {e}")
-        return {"resumo": "Erro ao resumir: falha ao decodificar JSON"}
+        return {"Resumo": "Erro ao resumir: falha ao decodificar JSON"}
             
     return response_json  # Retorna a resposta do modelo
 
@@ -99,18 +182,6 @@ def update_all_pages_data(data_dict, extracted_dict):
     """
     Atualiza o dicionário consolidado com os dados extraídos de uma página usando regex.
     """
-    
-    data_dict["Processo"].add(extracted_dict["Processo"])
-    
-    data_dict["Autor"].add(extracted_dict["Autor"])
-
-    data_dict["Salário"].add(extracted_dict["Salário"])
-
-    data_dict["Tempo"].add(extracted_dict["Tempo"])
-
-    data_dict["Valor"].add(extracted_dict["Valor"])
-
-    data_dict["Objetos"].add(extracted_dict["Objetos"])
     
     data_dict["Resumo"].append(extracted_dict["Resumo"])
 
