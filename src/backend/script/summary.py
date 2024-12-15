@@ -3,13 +3,24 @@ import re
 import PyPDF2
 from io import BytesIO
 from langchain.chains import ConversationChain
-from src.backend.utils.maps import extract_information_from_page, update_all_pages_data, limitar_tokens
+from azure.core.credentials import AzureKeyCredential
+from azure.ai.formrecognizer import DocumentAnalysisClient
+from src.backend.utils.maps import summary_page, process_sentences, update_all_pages_data, limitar_tokens, remove_patterns_from_sentences
 from src.backend.llm.azure_open_ai import create_azure_chat_llm
 from src.backend.storage.storage import AzureDataLake
 from src.backend.utils.logger_config import logger
+from unidecode import unidecode
 import json
 
+endpoint = os.getenv("AZURE_DOCUMENT_ENDPOINT")
+key = os.getenv("AZURE_DOCUMENT_KEY")
+
+
+
 def summarization(folder_name):
+    """
+    Processa PDFs de uma pasta no Azure Data Lake, gera resumos jurídicos e os salva no Data Lake.
+    """
     # Inicializar Azure Data Lake
     datalake = AzureDataLake()
 
@@ -23,98 +34,124 @@ def summarization(folder_name):
     # Configurar o modelo de LLM
     llm = create_azure_chat_llm(temperature=0)
     conversation = ConversationChain(llm=llm, verbose=True)
+    
+    document_analysis_client = DocumentAnalysisClient(
+        endpoint=endpoint, credential=AzureKeyCredential(key)
+    )
 
     for file_name in user_files:
+        # Inicializar armazenamento de resumos
+        all_pages_summary = {"Resumo": []}
+
         # Baixar o arquivo do Data Lake
         file_stream = BytesIO()
         datalake.download_file(file_name, file_stream)
         file_stream.seek(0)
 
-        # Processar o arquivo PDF
-        pdf_reader = PyPDF2.PdfReader(file_stream)
+        # Analisar o documento com o Azure Document Intelligence
+        poller = document_analysis_client.begin_analyze_document(
+            "prebuilt-layout", document=file_stream
+        )
+        result = poller.result()
 
-        # Dicionário para armazenar informações do arquivo atual
-        all_pages_data = {
-            "Processo": set(),
-            "Autor": set(),
-            "Salário": set(),
-            "Tempo": set(),
-            "Valor": set(),
-            "Objetos": set(),
-            "Resumo": []
-        }
+        # Extrair e processar texto das páginas
+        sentences = []
+        for page in result.pages:
+            lines = [unidecode(line.content).strip().lower() for line in page.lines]
+            sentences.append(" ".join(lines))
 
-        for page_num in range(len(pdf_reader.pages)):
-            page_text = pdf_reader.pages[page_num].extract_text()
-            extracted_data = extract_information_from_page(conversation, page_text)
-            update_all_pages_data(all_pages_data, extracted_data)
+        sentences_cleaned = remove_patterns_from_sentences(sentences[:20])
+
+        # Gerar resumo para cada página
+        for text in sentences_cleaned:
+            page_summary = summary_page(conversation, text)
+            update_all_pages_data(all_pages_summary, page_summary)
             conversation.memory.clear()
 
-        final_prompt = (
-            f"""
-            Você é um agente de inteligência artificial especializado em redigir resumos jurídicos de maneira precisa e objetiva. 
-            Você recebeu uma string contendo os resumos de cada página de uma reclamação trabalhista. 
-            Sua tarefa é consolidar essas informações em um único texto coeso, claro e direto, representando o resumo da reclamação trabalhista como um todo.
-            O texto final deve refletir o conteúdo integral da reclamação, sem conter termos como "a página diz/trata/menciona" ou indicar que as informações vêm de páginas específicas.
+        # Consolidar os resumos das páginas
+        consolidated_summary = consolidate_summaries(conversation, all_pages_summary["Resumo"])
 
-            ### Formato da Resposta ###
-            Retorne exclusivamente uma resposta em JSON no seguinte formato:
-            {{
-            "resumo": "A reclamação trabalhista diz..."
-            }}
-            
-            ### Regras Adicionais ###
-            - Não inclua frases desnecessárias que indiquem a origem das informações.
-            - Construa o texto de forma fluida, combinando os resumos em um único parágrafo que capture a essência da reclamação trabalhista.
-            - Seja objetivo e mantenha um tom formal e técnico.
-            
-            ***STRING: {' '.join(all_pages_data["Resumo"])}***
+        # Extrair metadados e preparar o conteúdo do resumo
+        dict_extract = process_sentences(sentences)
+        summary_content = create_summary_content(dict_extract, consolidated_summary)
 
-            Resposta em JSON:
-            """
-        )
-
-        final_prompt_limited = limitar_tokens(final_prompt)
-        final_summary = conversation.run(final_prompt_limited)
-        print("final_summary: ", final_summary)
-        try:
-            # Limpar espaços e quebras de linha
-            final_summary_cleaned = final_summary.strip()
-            print("final_summary_cleaned: ", final_summary_cleaned)
-            # Verificar se é JSON válido
-            if final_summary_cleaned.startswith('{') and final_summary_cleaned.endswith('}'):
-                final_summary_json = json.loads(final_summary_cleaned)
-                print("final_summary_json: ", final_summary_json)
-            else:
-                logger.error("Formato inválido, o texto não é JSON.")
-                return {"resumo": "Erro ao resumir: formato inválido"}
-        except json.JSONDecodeError as e:
-            logger.error(f"Erro ao decodificar JSON: {e}")
-            return {"resumo": "Erro ao resumir: falha ao decodificar JSON"}
-        
-        resumo = final_summary_json['resumo']
-        # Criar o nome do arquivo de resumo
+        # Criar o nome do arquivo de saída
         base_name = os.path.splitext(os.path.basename(file_name))[0]
         summary_file_name = f"{folder_name}/{base_name}_summary.txt"
 
-        # Criar o conteúdo do arquivo .txt
-        summary_content = (
-            f"Informações extraídas:\n"
-            f"Processo: {all_pages_data['Processo']}\n"
-            f"Autor: {all_pages_data['Autor']}\n"
-            f"Salário: {all_pages_data['Salário']}\n"
-            f"Tempo: {all_pages_data['Tempo']}\n"
-            f"Valor: {all_pages_data['Valor']}\n"
-            f"Objetos: {all_pages_data['Objetos']}\n\n"
-            f"Resumo consolidado:\n"
-            f"{resumo}"
-        )
-
-        # Salvar o resumo como arquivo no Azure Data Lake
-        summary_stream = BytesIO(summary_content.encode('utf-8'))
-        datalake.upload_file_obj(summary_stream, summary_file_name)
+        # Salvar o resumo no Azure Data Lake
+        save_summary_to_datalake(datalake, summary_content, summary_file_name)
 
         logger.info(f"Summary generated and uploaded for file {file_name}")
 
-
     return f"Summaries generated successfully for folder {folder_name}."
+
+
+def consolidate_summaries(conversation, summaries):
+    """
+    Consolida os resumos das páginas em um único texto coeso.
+    """
+    consolidated_prompt = (
+        f"""
+        Você é um agente de inteligência artificial especializado em redigir resumos jurídicos de maneira precisa e objetiva. 
+        Sua tarefa é consolidar os resumos de cada página de uma reclamação trabalhista em um único texto coeso, claro e direto, representando o resumo da reclamação trabalhista como um todo.
+
+        ### Formato de saída obrigatório ###
+        Retorne exclusivamente uma resposta em JSON, sem nenhum texto adicional ou explicação. O formato exato é:
+
+        {{
+            "resumo": "A reclamação trabalhista diz <Resumo objetivo do conteúdo>"
+        }}
+
+        ### Regras ###
+        - Não inclua frases como "a página diz/trata/menciona" ou referências às origens das informações.
+        - Construa o texto de forma fluida, combinando os resumos em um único parágrafo objetivo.
+        - Seja técnico e formal.
+
+        ***STRING: {' '.join(summaries)}***
+
+        Resposta:
+        """
+    )
+
+    consolidated_prompt = limitar_tokens(consolidated_prompt)
+    response = conversation.run(consolidated_prompt)
+
+    try:
+        # Extração e validação do JSON retornado
+        json_start = response.find('{')
+        json_end = response.rfind('}') + 1
+        if json_start != -1 and json_end != -1:
+            response = response[json_start:json_end]
+        return json.loads(response).get("resumo", "Erro: resumo não encontrado no JSON.")
+    except json.JSONDecodeError as e:
+        logger.error(f"Erro ao decodificar JSON: {e}")
+        return "Erro ao resumir: falha ao decodificar JSON"
+
+
+def create_summary_content(dict_extract, resumo):
+    """
+    Gera o conteúdo do resumo consolidado com os metadados extraídos.
+    """
+    return (
+        f"Informações extraídas:\n"
+        f"Valor da causa: {dict_extract['ValorCausa']}\n"
+        f"Reclamante: {dict_extract['Reclamante']}\n"
+        f"Aviso prévio: {dict_extract['AvisoPrevio']}\n"
+        f"Danos morais: {dict_extract['DanosMorais']}\n"
+        f"Honorários: {dict_extract['Honorarios']}\n"
+        f"Salário: {dict_extract['Salario']}\n"
+        f"Data de início: {dict_extract['DataInicio']}\n"
+        f"Data de demissão: {dict_extract['DataFim']}\n\n"
+        f"Resumo consolidado:\n"
+        f"{resumo}"
+    )
+
+
+def save_summary_to_datalake(datalake, summary_content, file_name):
+    """
+    Salva o resumo consolidado no Azure Data Lake.
+    """
+    summary_stream = BytesIO(summary_content.encode('utf-8'))
+    datalake.upload_file_obj(summary_stream, file_name)
+
