@@ -33,7 +33,7 @@ def upload_rank():
             return redirect(request.url)
         
         if file:
-            data = datetime.datetime.now().strftime("%Y_%m_%d")
+            data = "" #datetime.datetime.now().strftime("%Y_%m_%d")
             nome_base, extensao = os.path.splitext(file.filename)
             # Definir o nome do objeto no Azure Data Lake (incluindo a "pasta")
             object_name = f'{folder_name}/{nome_base}_{data}{extensao}'
@@ -85,21 +85,32 @@ def download_rankings():
     try:
         datalake = AzureDataLake()
         files = datalake.get_files_names_from_adls()
-        class_files = [f for f in files if f.startswith(folder_name) and f.endswith('.txt')]
+        rank_files = [f for f in files if f.startswith(folder_name) and f.endswith('.xlsx')]
+        pdf_files = [f for f in files if f.startswith(folder_name) and f.endswith(".pdf")]
 
-        if not class_files:
+        if not rank_files:
             logger.info(f"No ranking files found in folder '{folder_name}'.")
             return jsonify({'message': 'No rankings available for download.'}), 404
 
         zip_stream = BytesIO()
         with ZipFile(zip_stream, 'w') as zip_file:
-            for file_name in class_files:
+            for file_name in rank_files:
                 file_stream = BytesIO()
                 datalake.download_file(file_name, file_stream)
                 file_stream.seek(0)
                 zip_file.writestr(os.path.basename(file_name), file_stream.read())
 
         zip_stream.seek(0)
+
+         # Excluir arquivos TXT enviados após o processamento
+        for xlsx_file_name in rank_files:
+            datalake.delete_file(xlsx_file_name)
+        logger.info(f"Deleted all summary files in folder '{folder_name}'.")
+
+        # Excluir arquivos PDF enviados após o processamento
+        for pdf_file_name in pdf_files:
+            datalake.delete_file(pdf_file_name)
+        logger.info(f"Deleted all processed PDF files in folder '{folder_name}'.")
 
         return send_file(
             zip_stream,

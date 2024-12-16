@@ -32,10 +32,10 @@ def upload_vendorlist():
             return redirect(request.url)
         
         if file:
-            data = datetime.datetime.now().strftime("%Y_%m_%d")
+            data = "" #datetime.datetime.now().strftime("%Y_%m_%d")
             nome_base, extensao = os.path.splitext(file.filename)
             # Definir o nome do objeto no Azure Data Lake (incluindo a "pasta")
-            object_name = f'{folder_name}/{nome_base}_{data}{extensao}'
+            object_name = f'{folder_name}/{nome_base}{data}{extensao}'
 
             # Fazer upload do arquivo para o Azure Data Lake diretamente da memória
             try:
