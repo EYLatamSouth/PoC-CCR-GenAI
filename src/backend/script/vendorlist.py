@@ -16,8 +16,8 @@ load_dotenv()
 llm = create_azure_chat_llm(temperature=0)
 conversation = ConversationChain(llm=llm, verbose=True)
 
-file = "BaseTeste_2024_12_11.XLSX"
-file_mat = "MATERIAIS_SPOT_CURVA_A_B_C_2024_12_11.xlsx"
+file = "BaseTeste.XLSX"
+file_mat = "MATERIAIS_SPOT_CURVA_A_B_C.xlsx"
 
 sheet = "Base Requisições 27.11"
 sheet_gm = 'GMs'
@@ -95,13 +95,24 @@ def vendorlist(folder_name):
         datalake.upload_file_obj(buffer, file_name)
         logger.info(f"File uploaded: {file_name}")
 
+    # Agrupar por grupo e consolidar os textos
+    grupos = df_merge_gm_filtered.groupby('Grupo')['Texto_breve'].apply(list).reset_index()
+
+
+    grupos['Validacao'] = grupos.apply(lambda row: validar_grupo(conversation,row['Grupo'], row['Texto_breve']), axis=1)
+
+    buffer = BytesIO()
+
+    grupos.to_excel(buffer, index=False, engine='openpyxl')
+    buffer.seek(0)
+
+    file_name = f"{folder_name}/01_Grupos_vendorlist.xlsx"
+    datalake.upload_file_obj(buffer, file_name)
+    logger.info(f"File uploaded: {file_name}")
+
     return f"Vendorlist generated successfully for folder {folder_name}."
 
-    # Agrupar por grupo e consolidar os textos
-    # grupos = df_merge_gm_filtered.groupby('Grupo')['Texto_breve'].apply(list).reset_index()
-
-
-    # grupos['Validacao'] = grupos.apply(lambda row: validar_grupo(conversation,row['Grupo'], row['Texto_breve']), axis=1)
+    
 
 
 
