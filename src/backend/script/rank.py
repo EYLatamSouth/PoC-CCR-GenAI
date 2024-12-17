@@ -29,8 +29,8 @@ def ranking(folder_name):
 
     # Listar arquivos do usuário no Data Lake
     
-    file_excelite = f'{folder_name}/excelite_.pdf'
-    file_bold = f'{folder_name}/bold_.pdf'
+    file_excelite = f'{folder_name}/fornecedor1.pdf'
+    file_bold = f'{folder_name}/fornecedor2.pdf'
      
 
     if (not file_excelite) or (not file_bold):
