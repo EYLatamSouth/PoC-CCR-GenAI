@@ -56,7 +56,7 @@ def vendorlist(folder_name):
 
     df_merge = df.merge(df_mat_curva, left_on='Material', right_on='MATERIAL', how='left').drop(columns=['MATERIAL'])
     df_merge_b_c = df_merge[(df_merge.CURVA == 'B') | (df_merge.CURVA == 'C')].copy()
-    df_merge_b_c_filtered = df_merge_b_c[df_merge_b_c.Urgencia_necessidade < 4].copy()
+    df_merge_b_c_filtered = df_merge_b_c[(df_merge_b_c.Urgencia_necessidade.isin([2,3]))].copy()
 
     df_merge_gm = df_merge_b_c_filtered.merge(df_gm, left_on='Grupo_de_mercadorias', right_on='GM', how='left').drop(columns=['GM'])
     df_merge_gm_filtered = df_merge_gm[df_merge_gm.Grupo.notna()].copy()
