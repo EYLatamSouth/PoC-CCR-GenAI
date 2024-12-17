@@ -137,7 +137,7 @@ def create_summary_content(dict_extract, resumo):
         f"Informações extraídas:\n"
         f"Valor da causa: {dict_extract['ValorCausa']}\n"
         f"Reclamante: {dict_extract['Reclamante']}\n"
-        f"Aviso prévio: {dict_extract['AvisoPrevio']}\n"
+        f"Aviso Prévio: {dict_extract['AvisoPrevio']}\n"
         f"Danos morais: {dict_extract['DanosMorais']}\n"
         f"Honorários: {dict_extract['Honorarios']}\n"
         f"Salário: {dict_extract['Salario']}\n"
