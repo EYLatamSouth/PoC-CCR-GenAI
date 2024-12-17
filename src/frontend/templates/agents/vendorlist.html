@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vendor List</title>
+    <title>Lista de Fornecedores</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <!-- Favicon-->
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/EY_COLOR_ICO.ico') }}" />
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/CCR_COLOR_ICO.ico') }}" />
 </head>
 <body>
     <div class="container-uplpad">
@@ -18,8 +18,8 @@
                         <div class="p-5">
                             <div class="text-center">
                                 <!-- Logo EY -->
-                                <img class="img-upload" src="{{ url_for('static', filename='img/EY_COLOR.png') }}" alt="Logo EY">
-                                <h1 class="h4 text-gray-900 mb-4">Gerar Vendor Lista</h1>
+                                <img class="img-upload" src="{{ url_for('static', filename='img/CCR_COLOR.png') }}" alt="Logo EY">
+                                <h1 class="h4 text-gray-900 mb-4">Gerar Lista de Fornecedores</h1>
                             </div>
 
                             <!-- Exibir mensagens de flash -->
@@ -38,7 +38,7 @@
                                <div class="card-txt-body">
                                    <p class="mb-3" style="font-size: 16px; color: #333;">
                                        <strong>Os documentos inseridos serão usados como input para um modelo de linguagem.</strong>
-                                       <br>Para garantir o bom funcionamento, é necessário que os arquivos sejam do tipo .xlsx.
+                                       <br>Para garantir o bom funcionamento, é necessário que os arquivos estejam no formato .xlsx.
                                    </p>
                                   
                                </div>
@@ -58,12 +58,12 @@
 
                                 <!-- Botão para gerar o vendorlisto -->
                                 <div class="text-center">
-                                    <button id="generateSummButton" class="btn-index-enabled">Gerar Vendor List</button>
+                                    <button id="generateSummButton" class="btn-index-enabled">Gerar Lista de Fornecedores</button>
                                 </div>
 
                                 <!-- Botão para baixar os vendorlistos -->
                                 <div class="text-center mt-3">
-                                    <button id="downloadVendorlistsButton" class="btn-download-enabled">Baixar Vendor List</button>
+                                    <button id="downloadVendorlistsButton" class="btn-download-enabled">Baixar Lista de Fornecedores</button>
                                 </div>
                         </div> 
                     </div> 
@@ -82,7 +82,7 @@
                                 document.getElementById('generateSummButton').addEventListener('click', function() {
                                     // Mostrar feedback de carregamento
                                     const button = this;
-                                    button.textContent = 'Gerando Vendor List...';
+                                    button.textContent = 'Gerando Lista de Fornecedores...';
                                     button.disabled = true;
 
                                     fetch("{{ url_for('vendorlist.generate_vendorlist') }}", {
@@ -97,12 +97,12 @@
                                         alert(data.message); // Exibe a mensagem de sucesso ou erro
                                     })
                                     .catch(error => {
-                                        alert('Erro ao gerar o Vendor List.');
+                                        alert('Erro ao gerar o Lista de Fornecedores.');
                                         console.error('Erro:', error);
                                     })
                                     .finally(() => {
                                         // Restaurar o botão após a conclusão
-                                        button.textContent = 'Gerar Vendor List';
+                                        button.textContent = 'Gerar Lista de Fornecedores';
                                         button.disabled = false;
                                     });
                                 });
@@ -131,7 +131,7 @@
                                         window.URL.revokeObjectURL(url);
                                     })
                                     .catch(error => {
-                                        alert('Erro ao baixaras Vendor List.');
+                                        alert('Erro ao baixaras Lista de Fornecedores.');
                                         console.error('Erro:', error);
                                     });
                                 });

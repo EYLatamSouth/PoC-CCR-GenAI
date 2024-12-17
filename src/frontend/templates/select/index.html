@@ -6,7 +6,7 @@
     <title>Agentes</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <!-- Favicon-->
-    <link rel="icon" type="image/x-icon" href="/static/img/EY_COLOR_ICO.ico" />
+    <link rel="icon" type="image/x-icon" href="/static/img/CCR_COLOR_ICO.ico" />
 </head>
 <body>
     <div class="container-login">
@@ -18,14 +18,14 @@
                         <div class="p-5">
                             <div class="text-center">
                                 <!-- Logo EY -->
-                                <img class="img-upload" src="{{ url_for('static', filename='img/EY_COLOR.png') }}" alt="Logo EY">
+                                <img class="img-upload" src="{{ url_for('static', filename='img/CCR_COLOR.png') }}" alt="Logo EY">
                                 <h1 class="h4 text-gray-900 mb-4">Qual agente você gostaria de usar?</h1>
                             </div>
                             <div class="button-container text-center">
                                 <a href="{{ url_for('summary.upload_summary') }}" class="btn-chat">Resumo</a>
                                 <a href="{{ url_for('classify.upload_classify') }}" class="btn-chat">Classificação</a>
                                 <a href="{{ url_for('rank.upload_rank') }}" class="btn-chat">Rank</a>
-                                <a href="{{ url_for('vendorlist.upload_vendorlist') }}" class="btn-chat">Vendor List</a>
+                                <a href="{{ url_for('vendorlist.upload_vendorlist') }}" class="btn-chat">Lista de Fornecedores</a>
                             </div>
                         </div>
                     </div>
