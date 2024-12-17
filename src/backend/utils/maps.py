@@ -70,14 +70,30 @@ def extract_reclamante(sentences):
     return matches
 
 def extract_aviso_previo(sentences):
-    pattern = r"[a-z]\) aviso previo.*?r\$\s?\d{1,3}(?:\.\d{3})*(?:,\s?\d{2});"
-    matches = [re.search(r"r\$\s?\d{1,3}(?:\.\d{3})*(?:,\s?\d{2})", m, re.IGNORECASE).group().upper() for m in sentences if re.search(pattern, m, re.IGNORECASE)]
-    return matches
+    pattern = r"aviso previo(?:\s+de\s*)?[\d\s]+dias[\s\.\,]*r\$\s?\d{1,3}(?:\.\d{3})*(?:,\d{2})"
+    values = []
+    for sentence in sentences:
+        match = re.search(pattern, sentence, re.IGNORECASE)
+        if match:
+            # Extrair o valor monetário (R$) encontrado na frase
+            value = re.search(r"r\$\s?\d{1,3}(?:\.\d{3})*(?:,\d{2})", match.group(), re.IGNORECASE)
+            if value:
+                values.append(value.group().upper())
+    return values
 
 def extract_danos_morais(sentences):
-    pattern = r"danos.*?r\$\s?\d{1,3}(?:\.\d{3})*(?:,\s?\d{2})"
-    matches = [re.search(r"r\$\s?\d{1,3}(?:\.\d{3})*(?:,\s?\d{2})", m, re.IGNORECASE).group().upper() for m in sentences if re.search(pattern, m, re.IGNORECASE)]
-    return matches
+    pattern = r"indenizar moralmente.*?r\$\s?\d{1,3}(?:\.\d{3})*(?:,\d{2})"
+    values = []
+    for sentence in sentences:
+        # Buscar o trecho relevante a partir de "indenizar moralmente"
+        match = re.search(pattern, sentence, re.IGNORECASE | re.DOTALL)
+        if match:
+            # Extrair apenas o valor monetário presente após "indenizar moralmente"
+            value = re.search(r"r\$\s?\d{1,3}(?:\.\d{3})*(?:,\d{2})", match.group(), re.IGNORECASE)
+            if value:
+                values.append(value.group().upper())
+    return values
+
 
 def extract_insalubridade(sentences):
     pattern = r"[a-z]\)\s.*?reclamante no pagamento do adicional de insalubridade.*?r\$\s?\d{1,3}(?:\.\d{3})*(?:,\s?\d{2})"
