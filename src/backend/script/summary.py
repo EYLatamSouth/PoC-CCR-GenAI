@@ -60,7 +60,7 @@ def summarization(folder_name):
             lines = [unidecode(line.content).strip().lower() for line in page.lines]
             sentences.append(" ".join(lines))
 
-        sentences_cleaned = remove_patterns_from_sentences(sentences[:20])
+        sentences_cleaned = remove_patterns_from_sentences(sentences[:30])
 
         # Gerar resumo para cada página
         for text in sentences_cleaned:
@@ -91,6 +91,29 @@ def consolidate_summaries(conversation, summaries):
     """
     Consolida os resumos das páginas em um único texto coeso.
     """
+    # consolidated_prompt = (
+    #     f"""
+    #     Você é um agente de inteligência artificial especializado em redigir resumos jurídicos de maneira precisa e objetiva. 
+    #     Sua tarefa é consolidar os resumos de cada página de uma reclamação trabalhista em um único texto coeso, claro e direto, representando o resumo da reclamação trabalhista como um todo.
+
+    #     ### Formato de saída obrigatório ###
+    #     Retorne exclusivamente uma resposta em JSON, sem nenhum texto adicional ou explicação. O formato exato é:
+
+    #     {{
+    #         "resumo": "A reclamação trabalhista diz <Resumo objetivo do conteúdo>"
+    #     }}
+
+    #     ### Regras ###
+    #     - Não inclua frases como "a página diz/trata/menciona" ou referências às origens das informações.
+    #     - Construa o texto de forma fluida, combinando os resumos em um único parágrafo objetivo.
+    #     - Seja técnico e formal.
+
+    #     ***STRING: {' '.join(summaries)}***
+
+    #     Resposta:
+    #     """
+    # )
+
     consolidated_prompt = (
         f"""
         Você é um agente de inteligência artificial especializado em redigir resumos jurídicos de maneira precisa e objetiva. 
@@ -100,19 +123,27 @@ def consolidate_summaries(conversation, summaries):
         Retorne exclusivamente uma resposta em JSON, sem nenhum texto adicional ou explicação. O formato exato é:
 
         {{
-            "resumo": "A reclamação trabalhista diz <Resumo objetivo do conteúdo>"
+            "resumo": "ADMITIDO EM [data de admissão] PARA EXERCER A FUNÇÃO DE [função], SENDO DESLIGADO EM [data de desligamento]. 
+                       ALEGA QUE [detalhes dos pedidos de forma agrupada e organizada, como verbas rescisórias, jornadas extraordinárias, condições de trabalho, assédio moral, entre outros]."
         }}
 
-        ### Regras ###
-        - Não inclua frases como "a página diz/trata/menciona" ou referências às origens das informações.
-        - Construa o texto de forma fluida, combinando os resumos em um único parágrafo objetivo.
-        - Seja técnico e formal.
+        ### Diretrizes ###
+        1. Inicie mencionando a data de admissão, a função exercida e a data de desligamento (se aplicável).
+        2. Construa o resumo agrupando os pedidos de forma lógica e direta, com foco nos principais tópicos da reclamação trabalhista.
+        3. Use uma linguagem técnica, formal e objetiva.
+        4. Não inclua expressões como "a página menciona" ou outras referências à origem da informação.
+        5. Evite redundâncias e foque em apresentar as informações de maneira concisa e fluida.
+        6. Se não tiver certeza de alguma informação, apenas nào mencione.
+
+        ### STRING FORNECIDA ###
+        Abaixo está a string consolidada de resumos das páginas da petição inicial. Use-a para criar um resumo conforme os exemplos e as diretrizes:
 
         ***STRING: {' '.join(summaries)}***
 
         Resposta:
         """
     )
+
 
     consolidated_prompt = limitar_tokens(consolidated_prompt)
     response = conversation.run(consolidated_prompt)
@@ -144,7 +175,7 @@ def create_summary_content(dict_extract, resumo):
         f"Data de início: {dict_extract['DataInicio']}\n"
         f"Data de demissão: {dict_extract['DataFim']}\n\n"
         f"Resumo consolidado:\n"
-        f"{resumo}"
+        f"{resumo.upper()}"
     )
 
 
